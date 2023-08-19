@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using System.Text.Json.Serialization;
 using Microsoft.AspNetCore.Http.Json;
 using Microsoft.AspNetCore.Http.HttpResults;
+using System.Runtime.CompilerServices;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -92,6 +93,32 @@ app.MapGet("/api/reservations", (CreekRiverDbContext db) =>
         .ThenInclude(c => c.CampsiteType)
         .OrderBy(res => res.CheckinDate)
         .ToList();
+});
+
+app.MapPost("/api/reservations", (CreekRiverDbContext db, Reservation newRes) =>
+{
+    try
+    {
+        db.Reservations.Add(newRes);
+        db.SaveChanges();
+        return Results.Created($"/api/reservations/{newRes.Id}", newRes);
+    }
+    catch (DbUpdateException)
+    {
+        return Results.BadRequest("Invalid data submitted");
+    }
+});
+
+app.MapDelete("/api/reservations", (CreekRiverDbContext db, int id) =>
+{
+    Reservation reservation = db.Reservations.FirstOrDefault(r => r.Id == id);
+    if (reservation == null)
+    {
+        return Results.NotFound();
+    }
+    db.Reservations.Remove(reservation);
+    db.SaveChanges();
+    return Results.NoContent();
 });
 
 app.Run();
